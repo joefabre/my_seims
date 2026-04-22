@@ -3,7 +3,7 @@
 my_seims — macOS Security Information and Event Management System
 """
 
-import json, re, sqlite3, subprocess, threading
+import json, os, re, signal, sqlite3, subprocess, sys, threading
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -1193,7 +1193,35 @@ def api_health():
         "connections":    conns[:20],
     })
 
-# ── Scheduler ──────────────────────────────────────────────────────────────────
+@app.route('/api/shutdown', methods=['POST'])
+def api_shutdown():
+    """Gracefully stop the server."""
+    def _stop():
+        import time; time.sleep(0.5)
+        os.kill(os.getpid(), signal.SIGTERM)
+    threading.Thread(target=_stop, daemon=True).start()
+    return jsonify({'status': 'stopping'})
+
+@app.route('/api/restart', methods=['POST'])
+def api_restart():
+    """Restart the server by spawning a new process then stopping this one."""
+    def _restart():
+        import time; time.sleep(0.8)
+        subprocess.Popen(
+            [sys.executable, str(Path(__file__).resolve())],
+            cwd=str(BASE_DIR),
+            start_new_session=True
+        )
+        os.kill(os.getpid(), signal.SIGTERM)
+    threading.Thread(target=_restart, daemon=True).start()
+    return jsonify({'status': 'restarting'})
+
+@app.route('/api/status')
+def api_status():
+    """Simple liveness check used by the restart polling loop."""
+    return jsonify({'status': 'ok'})
+
+# ── Scheduler ────────────────────────────────────────────────
 scheduler = BackgroundScheduler(daemon=True)
 
 if __name__ == "__main__":

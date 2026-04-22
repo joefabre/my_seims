@@ -838,6 +838,76 @@ async function triggerScan() {
   }
 }
 
+// ── Stop / Restart ────────────────────────────────────────────────────────────
+async function stopServer() {
+  openModal('Stop Server',
+    `<p style="font-size:13px;line-height:1.7">This will <strong>stop the my_seims server</strong>. The dashboard will become unreachable until you restart it from the terminal.</p>
+     <p class="text-muted text-sm mt-12">To start again:<br>
+     <code style="font-size:11px;background:var(--bg3);padding:4px 8px;border-radius:4px;display:inline-block;margin-top:6px">
+     bash ~/Desktop/my_seims/run.sh</code></p>`,
+    `<button class="btn btn-danger" id="btn-confirm-stop"><i class="fa-solid fa-power-off"></i> Stop Server</button>
+     <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>`
+  );
+  document.getElementById('btn-confirm-stop').onclick = async () => {
+    closeModal();
+    try {
+      await api.post('/api/shutdown');
+    } catch {}
+    // Show stopped state
+    document.getElementById('status-dot').className = 'status-dot error';
+    document.getElementById('status-text').textContent = 'Stopped';
+    document.getElementById('btn-stop').disabled    = true;
+    document.getElementById('btn-restart').disabled = true;
+    document.getElementById('btn-scan-now').disabled = true;
+    toast('Server stopped. Refresh this tab once you restart.', 'info');
+  };
+}
+
+async function restartServer() {
+  const overlay  = document.getElementById('restart-overlay');
+  const roTitle  = document.getElementById('ro-title');
+  const roSub    = document.getElementById('ro-sub');
+  const roBar    = document.getElementById('ro-bar');
+
+  // Show overlay
+  overlay.classList.remove('hidden');
+  roTitle.textContent = 'Restarting server…';
+  roSub.textContent   = 'Sending restart signal';
+  roBar.style.width   = '0%';
+
+  try { await api.post('/api/restart'); } catch {}
+
+  // Poll until server is back (max 20s)
+  const MAX = 20, STEP = 500;
+  let elapsed = 0;
+  roSub.textContent = 'Waiting for server to come back online…';
+
+  const poll = setInterval(async () => {
+    elapsed += STEP;
+    roBar.style.width = Math.min((elapsed / (MAX * 1000)) * 100, 95) + '%';
+    roSub.textContent = `${Math.ceil((MAX * 1000 - elapsed) / 1000)}s remaining…`;
+
+    try {
+      const r = await fetch('/api/status', { cache: 'no-store' });
+      if (r.ok) {
+        clearInterval(poll);
+        roBar.style.width   = '100%';
+        roTitle.textContent = 'Server restarted!';
+        roSub.textContent   = 'Reloading dashboard…';
+        setTimeout(() => { overlay.classList.add('hidden'); navigate('dashboard'); }, 800);
+      }
+    } catch {}
+
+    if (elapsed >= MAX * 1000) {
+      clearInterval(poll);
+      roTitle.textContent = 'Server not responding';
+      roSub.textContent   = 'Try: bash ~/Desktop/my_seims/run.sh';
+      roBar.style.background = 'var(--red)';
+      setTimeout(() => overlay.classList.add('hidden'), 4000);
+    }
+  }, STEP);
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 function init() {
   // Nav
@@ -847,6 +917,10 @@ function init() {
 
   // Scan now
   document.getElementById('btn-scan-now').addEventListener('click', triggerScan);
+
+  // Stop / Restart
+  document.getElementById('btn-stop').addEventListener('click', stopServer);
+  document.getElementById('btn-restart').addEventListener('click', restartServer);
 
   // Modal close
   document.getElementById('modal-close').addEventListener('click', closeModal);

@@ -110,6 +110,32 @@ button { cursor: pointer; }
 }
 .btn-scan:hover { background: var(--blue); }
 
+.server-btns { display: flex; gap: 6px; margin-top: 2px; }
+.btn-server {
+  flex: 1; border: none; padding: 6px 8px; border-radius: var(--radius);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-restart { background: rgba(227,179,65,0.15); color: var(--yellow); }
+.btn-restart:hover { background: rgba(227,179,65,0.28); }
+.btn-stop    { background: rgba(248,81,73,0.13);  color: var(--red); }
+.btn-stop:hover    { background: rgba(248,81,73,0.25); }
+.btn-server:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Restart countdown overlay */
+#restart-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+  z-index: 3000; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+}
+#restart-overlay.hidden { display: none; }
+#restart-overlay .ro-icon { font-size: 40px; color: var(--yellow); animation: spin 1s linear infinite; }
+#restart-overlay .ro-title { font-size: 18px; font-weight: 700; color: var(--white); }
+#restart-overlay .ro-sub   { font-size: 13px; color: var(--text2); }
+#restart-overlay .ro-bar-wrap { width: 260px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+#restart-overlay .ro-bar { height: 100%; background: var(--yellow); border-radius: 2px; transition: width 0.5s linear; }
+
 /* ── Main wrapper ────────────────────────────────────────────────────────── */
 #main-wrapper {
   margin-left: var(--sidebar-w);

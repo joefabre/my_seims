@@ -50,6 +50,14 @@
     <button class="btn-scan" id="btn-scan-now">
       <i class="fa-solid fa-bolt"></i> Scan Now
     </button>
+    <div class="server-btns">
+      <button class="btn-server btn-restart" id="btn-restart" title="Restart server">
+        <i class="fa-solid fa-rotate-right"></i> Restart
+      </button>
+      <button class="btn-server btn-stop" id="btn-stop" title="Stop server">
+        <i class="fa-solid fa-power-off"></i> Stop
+      </button>
+    </div>
   </div>
 </nav>
 
@@ -92,6 +100,14 @@
     <div id="modal-body"></div>
     <div id="modal-footer"></div>
   </div>
+</div>
+
+<!-- ── Restart overlay ──────────────────────────────────────────────────── -->
+<div id="restart-overlay" class="hidden">
+  <i class="fa-solid fa-rotate-right ro-icon"></i>
+  <div class="ro-title" id="ro-title">Restarting…</div>
+  <div class="ro-sub"  id="ro-sub">Please wait</div>
+  <div class="ro-bar-wrap"><div class="ro-bar" id="ro-bar" style="width:0%"></div></div>
 </div>
 
 <!-- ── Toasts ─────────────────────────────────────────────────────────────── -->
