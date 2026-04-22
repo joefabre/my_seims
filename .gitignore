@@ -1,0 +1,20 @@
+# Database
+data/seims.db
+data/
+
+# Generated reports
+reports/*.pdf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Logs
+*.log
+nohup.out
+
+# macOS
+.DS_Store
