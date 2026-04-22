@@ -239,9 +239,345 @@ PDF reports include:
 
 ---
 
+## Maintenance Guide
+
+### Routine tasks
+
+**Check the app is running**
+```bash
+curl -s http://localhost:5001/api/dashboard | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK — events today:', d['stats']['total_today'])"
+```
+
+**View live server log**
+```bash
+tail -f /tmp/seims.log
+```
+
+**Restart the app**
+```bash
+lsof -ti :5001 | xargs kill 2>/dev/null
+nohup python3 ~/Desktop/my_seims/app.py > /tmp/seims.log 2>&1 &
+```
+
+**Trigger an immediate scan from the command line**
+```bash
+curl -s -X POST http://localhost:5001/api/scan
+```
+
+---
+
+### Database maintenance
+
+The SQLite database lives at `data/seims.db`. It is never committed to git.
+
+**Manually purge events older than 30 days**
+```bash
+sqlite3 ~/Desktop/my_seims/data/seims.db \
+  "DELETE FROM events WHERE created_at < datetime('now', '-30 days');"
+```
+
+**Purge resolved alerts older than 60 days**
+```bash
+sqlite3 ~/Desktop/my_seims/data/seims.db \
+  "DELETE FROM alerts WHERE status='resolved' AND resolved_at < datetime('now', '-60 days');"
+```
+
+**Compact the database after purging**
+```bash
+sqlite3 ~/Desktop/my_seims/data/seims.db "VACUUM;"
+```
+
+**Backup the database**
+```bash
+cp ~/Desktop/my_seims/data/seims.db ~/Desktop/my_seims/data/seims.db.bak
+```
+
+**Reset everything (wipe all events, alerts, and history)**
+```bash
+rm ~/Desktop/my_seims/data/seims.db
+# Restart the app — the database is recreated automatically with default rules and settings
+```
+
+---
+
+### Updating dependencies
+
+```bash
+pip3 install --upgrade flask apscheduler reportlab psutil
+```
+
+Test after upgrading:
+```bash
+curl -s http://localhost:5001/api/dashboard | python3 -c "import sys,json; print(json.load(sys.stdin)['stats'])"
+```
+
+---
+
+### Granting Full Disk Access for complete log coverage
+
+`log show` (used for unified log scanning) returns limited results without Full Disk Access.
+
+1. Open **System Settings → Privacy & Security → Full Disk Access**
+2. Click **+** and add your terminal app (Terminal, iTerm2, or Warp)
+3. Restart the app
+
+You will immediately see significantly more events per scan cycle.
+
+---
+
+### Auto-start on login
+
+Create a launchd agent so my_seims starts automatically at login:
+
+```bash
+cat > ~/Library/LaunchAgents/com.local.myseims.plist << 'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>             <string>com.local.myseims</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/joefabre/Desktop/my_seims/app.py</string>
+    </array>
+    <key>RunAtLoad</key>         <true/>
+    <key>KeepAlive</key>         <true/>
+    <key>StandardOutPath</key>   <string>/tmp/seims.log</string>
+    <key>StandardErrorPath</key> <string>/tmp/seims.log</string>
+    <key>WorkingDirectory</key>  <string>/Users/joefabre/Desktop/my_seims</string>
+</dict>
+</plist>
+PLIST
+launchctl load ~/Library/LaunchAgents/com.local.myseims.plist
+```
+
+To remove it:
+```bash
+launchctl unload ~/Library/LaunchAgents/com.local.myseims.plist
+rm ~/Library/LaunchAgents/com.local.myseims.plist
+```
+
+---
+
+### Contributing changes
+
+```bash
+cd ~/Desktop/my_seims
+git checkout -b feature/my-change
+# make edits
+git add -A && git commit -m "describe change"
+git push -u origin feature/my-change
+gh pr create --fill
+```
+
+---
+
+## Detection Rule Guide
+
+### How rules work
+
+During each scan, every log event is tested against all enabled rules in sequence.
+A rule matches when **either** its regex pattern matches the event message **or** its process name matches the event's process field.
+When the match count within the configured time window reaches the threshold, an alert is created and stored in the database.
+
+```
+Event message  ──► regex pattern match? ──┐
+Event process  ──► process name match?  ──┴──► threshold reached? ──► Alert created
+```
+
+---
+
+### Rule fields
+
+| Field | Type | Description |
+|---|---|---|
+| **Name** | string | Short display name shown in alerts and reports |
+| **Description** | string | Plain-English explanation used in alert details and PDF reports |
+| **Severity** | enum | `critical` / `high` / `medium` / `low` / `info` |
+| **Category** | enum | Groups related rules — see categories below |
+| **Pattern** | regex | Extended regex matched against the log message (case-insensitive). Leave blank to match by process only |
+| **Process Name** | string | Exact process name substring match (e.g. `sudo`, `sshd`). Leave blank to match by pattern only |
+| **Log Source** | enum | `unified` / `install` / `system` / `network` / `login` |
+| **Threshold** | integer | Number of matches within the time window before an alert fires. Use `1` to alert on every match |
+| **Time Window** | seconds | Rolling window for threshold counting. e.g. `300` = 5 matches in 5 minutes triggers once |
+| **Enabled** | toggle | Disabled rules are skipped entirely during scanning |
+
+---
+
+### Categories
+
+| Category | When to use |
+|---|---|
+| `authentication` | Login attempts, password events, SSH, MFA |
+| `privilege_escalation` | sudo, su, root access, privilege grants |
+| `network` | Suspicious connections, port scans, firewall events |
+| `security` | Sandbox violations, Gatekeeper, keychain, FileVault |
+| `system` | Software installs, config changes, kernel extensions |
+| `persistence` | LaunchAgents, LaunchDaemons, startup items |
+| `malware` | Known offensive tools, reverse shells, C2 patterns |
+
+---
+
+### Writing a pattern
+
+Patterns are Python-compatible Extended Regular Expressions, matched case-insensitively against the full log message.
+
+**Match a single keyword**
+```
+fileVault
+```
+
+**Match any of several keywords (OR)**
+```
+failed login|authentication failed|invalid password
+```
+
+**Match a keyword near another word**
+```
+sudo.*failed|failed.*sudo
+```
+
+**Match a specific process and action**
+```
+sshd.*invalid user
+```
+
+**Match an IP address pattern**
+```
+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}.*refused
+```
+
+**Test your pattern before saving** — paste it into a Python shell:
+```python
+import re, sqlite3
+conn = sqlite3.connect('/Users/joefabre/Desktop/my_seims/data/seims.db')
+pattern = r'your_pattern_here'
+rows = conn.execute('SELECT message FROM events LIMIT 500').fetchall()
+matches = [r[0] for r in rows if re.search(pattern, r[0], re.IGNORECASE)]
+print(f'{len(matches)} matches'); [print(' -', m[:120]) for m in matches[:5]]
+```
+
+---
+
+### Threshold and time window
+
+| Goal | Threshold | Time Window |
+|---|---|---|
+| Alert on the very first occurrence | 1 | 60 |
+| Alert only if it happens 3+ times in 5 minutes (brute force) | 3 | 300 |
+| Alert if it happens 10+ times in an hour | 10 | 3600 |
+| Suppress noisy low-signal events | 20 | 3600 |
+
+---
+
+### Example rules
+
+**Detect curl or wget being run (data exfiltration indicator)**
+
+| Field | Value |
+|---|---|
+| Name | Outbound Transfer Tool |
+| Severity | medium |
+| Category | network |
+| Pattern | `\bcurl\b\|\bwget\b` |
+| Process Name | *(leave blank)* |
+| Threshold | 1 |
+| Time Window | 60 |
+
+**Alert on repeated permission denials from a single process (anomaly detection)**
+
+| Field | Value |
+|---|---|
+| Name | Repeated Permission Denials |
+| Severity | high |
+| Category | security |
+| Pattern | `[Pp]ermission denied` |
+| Process Name | *(leave blank)* |
+| Threshold | 10 |
+| Time Window | 120 |
+
+**Detect any attempt to modify /etc/hosts**
+
+| Field | Value |
+|---|---|
+| Name | /etc/hosts Modified |
+| Severity | critical |
+| Category | system |
+| Pattern | `/etc/hosts` |
+| Process Name | *(leave blank)* |
+| Threshold | 1 |
+| Time Window | 60 |
+
+**Detect Homebrew package installs**
+
+| Field | Value |
+|---|---|
+| Name | Homebrew Install |
+| Severity | low |
+| Category | system |
+| Pattern | `brew install\|brew upgrade` |
+| Process Name | `brew` |
+| Threshold | 1 |
+| Time Window | 300 |
+
+**Alert on any screen recording or screenshot tool**
+
+| Field | Value |
+|---|---|
+| Name | Screen Capture Activity |
+| Severity | medium |
+| Category | security |
+| Pattern | `screencapture\|screenshot\|screen recording` |
+| Process Name | *(leave blank)* |
+| Threshold | 1 |
+| Time Window | 60 |
+
+---
+
+### Adding a rule via the API (scripting / automation)
+
+```bash
+curl -s -X POST http://localhost:5001/api/rules \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "My Custom Rule",
+    "description": "Detects XYZ activity",
+    "severity": "high",
+    "category": "security",
+    "pattern": "your_pattern_here",
+    "process_name": "",
+    "log_source": "unified",
+    "threshold": 1,
+    "time_window": 60,
+    "enabled": 1
+  }'
+```
+
+---
+
+### Tuning existing rules
+
+**A rule is too noisy (too many alerts)** 
+Raise the threshold, narrow the pattern, or temporarily disable it while investigating.
+
+**A rule is missing real events** 
+Widen the pattern with `|` alternatives, or lower the threshold to 1 to ensure every match fires.
+
+**A rule fires on the wrong process** 
+Add the correct process name to restrict matching, or prefix the pattern with the process: `sudo.*your_term`.
+
+**Viewing what a rule has caught so far**
+```bash
+sqlite3 ~/Desktop/my_seims/data/seims.db \
+  "SELECT created_at, title, event_count FROM alerts WHERE rule_id=<ID> ORDER BY created_at DESC LIMIT 20;"
+```
+
+---
+
 ## Notes
 
-- The server binds to `127.0.0.1:5001` only — it is not accessible from other machines on your network.
+- The server binds to `127.0.0.1:5001` only — not accessible from other machines on the network.
 - The SQLite database and all reports are stored locally in `my_seims/data/` and `my_seims/reports/`.
-- `log show` (used for unified log scanning) may return limited results without Full Disk Access. Grant it via **System Settings → Privacy & Security → Full Disk Access → Terminal**.
-- This tool is for personal/local use. It is not a replacement for enterprise security tooling.
+- `log show` returns limited results without Full Disk Access — see Maintenance Guide above.
+- This tool is for personal/local use and is not a replacement for enterprise security tooling.
