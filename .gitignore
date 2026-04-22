@@ -1,6 +1,5 @@
 # Database
 data/seims.db
-data/
 
 # Generated reports
 reports/*.pdf
