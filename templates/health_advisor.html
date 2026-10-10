@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>HealthBot — AI Health Advisor</title>
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="HealthBot">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>&#x1F4BB;</text></svg>">
+  <link rel="stylesheet" href="/static/css/health_advisor.css">
+</head>
+<body>
+<div class="app-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">&#x1FA7A;</span>
+      <span class="logo-text">HealthBot</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-tab="dashboard"><span class="nav-icon">&#x1F4CA;</span><span class="nav-label">Dashboard</span></button>
+      <button class="nav-item" data-tab="chat"><span class="nav-icon">&#x1F4AC;</span><span class="nav-label">AI Advisor</span></button>
+      <button class="nav-item" data-tab="vitals"><span class="nav-icon">&#x2764;&#xFE0F;</span><span class="nav-label">Vitals</span></button>
+      <button class="nav-item" data-tab="medications"><span class="nav-icon">&#x1F48A;</span><span class="nav-label">Medications</span></button>
+      <button class="nav-item" data-tab="symptoms"><span class="nav-icon">&#x1F912;</span><span class="nav-label">Symptoms</span></button>
+      <button class="nav-item" data-tab="appointments"><span class="nav-icon">&#x1F4C5;</span><span class="nav-label">Appointments</span></button>
+      <button class="nav-item" data-tab="notes"><span class="nav-icon">&#x1F4DD;</span><span class="nav-label">Notes</span></button>
+      <button class="nav-item" data-tab="profile"><span class="nav-icon">&#x1F464;</span><span class="nav-label">Profile</span></button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-ghost" id="reportBtn">&#x1F4C4; Health Report</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-wrapper">
+    <header class="mobile-header">
+      <span class="mobile-title" id="mobileTitle">Dashboard</span>
+      <button class="btn-icon" id="mobileReportBtn" title="Download Report">&#x1F4C4;</button>
+    </header>
+
+    <main class="main-content">
+
+      <!-- Dashboard -->
+      <section class="tab-panel active" id="tab-dashboard">
+        <div class="page-header">
+          <div><h1>Dashboard</h1><p class="page-subtitle" id="dash-greeting">Welcome!</p></div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon">&#x2764;&#xFE0F;</div><div class="stat-info"><div class="stat-value" id="stat-vitals">-</div><div class="stat-label">Vitals Logged</div></div></div>
+          <div class="stat-card"><div class="stat-icon">&#x1F48A;</div><div class="stat-info"><div class="stat-value" id="stat-meds">-</div><div class="stat-label">Active Meds</div></div></div>
+          <div class="stat-card"><div class="stat-icon">&#x1F912;</div><div class="stat-info"><div class="stat-value" id="stat-symptoms">-</div><div class="stat-label">Symptoms (30d)</div></div></div>
+          <div class="stat-card"><div class="stat-icon">&#x1F4C5;</div><div class="stat-info"><div class="stat-value" id="stat-appts">-</div><div class="stat-label">Upcoming Appts</div></div></div>
+        </div>
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header"><h2>Latest Vitals</h2><button class="btn-sm" onclick="switchTab('vitals')">+ Add</button></div>
+            <div class="vitals-grid" id="latestVitalsGrid"><p class="empty-state">No vitals recorded yet</p></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h2>Upcoming Appointments</h2><button class="btn-sm" onclick="switchTab('appointments')">+ Add</button></div>
+            <div id="upcomingAppts"><p class="empty-state">No upcoming appointments</p></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h2>Recent Symptoms</h2><button class="btn-sm" onclick="switchTab('symptoms')">+ Log</button></div>
+            <div id="recentSymptoms"><p class="empty-state">No recent symptoms</p></div>
+          </div>
+          <div class="card chat-teaser">
+            <div class="card-header"><h2>AI Health Advisor</h2></div>
+            <p>Ask your AI advisor about your health data, symptoms, medications, or wellness tips.</p>
+            <button class="btn-primary" onclick="switchTab('chat')">&#x1F4AC; Start Chat</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chat -->
+      <section class="tab-panel" id="tab-chat">
+        <div class="chat-layout">
+          <div class="chat-header">
+            <div class="chat-avatar">&#x1F916;</div>
+            <div><h2>HealthBot AI Advisor</h2><p class="status-text">Powered by Claude &middot; Not a substitute for medical advice</p></div>
+            <button class="btn-ghost btn-sm" id="clearChatBtn">&#x1F5D1; Clear</button>
+          </div>
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-message assistant">
+              <div class="message-avatar">&#x1F916;</div>
+              <div class="message-bubble">
+                <p>Hello! I'm HealthBot, your AI health advisor. I can help you:</p>
+                <ul>
+                  <li>Understand your health data and trends</li>
+                  <li>Learn about symptoms and conditions</li>
+                  <li>Prepare questions for doctor visits</li>
+                  <li>Build healthier habits</li>
+                </ul>
+                <p>What's on your mind today?</p>
+                <p class="disclaimer">&#x26A0;&#xFE0F; I'm an AI, not a physician. Always consult your doctor for medical decisions.</p>
+              </div>
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <div class="chat-input-row">
+              <textarea class="chat-input" id="chatInput" placeholder="Ask about your health, symptoms, medications..." rows="1" maxlength="2000"></textarea>
+              <button class="chat-send" id="chatSend" aria-label="Send">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+            <p class="chat-hint">Quick: <button class="chip" onclick="askQuick('What should I know about my current medications?')">My meds</button> <button class="chip" onclick="askQuick('Analyze my recent vitals and tell me what to watch.')">Vitals analysis</button> <button class="chip" onclick="askQuick('Give me personalized wellness tips.')">Wellness tips</button></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Vitals -->
+      <section class="tab-panel" id="tab-vitals">
+        <div class="page-header"><h1>Vitals Tracker</h1><button class="btn-primary" id="addVitalBtn">+ Log Vital</button></div>
+        <div class="form-panel" id="vitalForm" style="display:none">
+          <h3>Log New Vital</h3>
+          <div class="form-grid">
+            <div class="form-group"><label>Type</label>
+              <select id="vitalType">
+                <option value="blood_pressure_systolic">Blood Pressure (Systolic)</option>
+                <option value="blood_pressure_diastolic">Blood Pressure (Diastolic)</option>
+                <option value="heart_rate">Heart Rate</option>
+                <option value="weight">Weight</option>
+                <option value="blood_glucose">Blood Glucose</option>
+                <option value="oxygen_saturation">Oxygen Saturation</option>
+                <option value="temperature">Temperature</option>
+                <option value="bmi">BMI</option>
+                <option value="cholesterol_total">Cholesterol (Total)</option>
+                <option value="cholesterol_ldl">Cholesterol (LDL)</option>
+                <option value="cholesterol_hdl">Cholesterol (HDL)</option>
+                <option value="triglycerides">Triglycerides</option>
+                <option value="hba1c">HbA1c</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Value</label><input type="number" step="0.1" id="vitalValue" placeholder="e.g. 120"></div>
+            <div class="form-group"><label>Unit</label><input type="text" id="vitalUnit" placeholder="e.g. mmHg"></div>
+            <div class="form-group"><label>Date &amp; Time</label><input type="datetime-local" id="vitalDate"></div>
+          </div>
+          <div class="form-group"><label>Notes</label><input type="text" id="vitalNotes" placeholder="Optional notes"></div>
+          <div class="form-actions">
+            <button class="btn-primary" onclick="saveVital()">Save</button>
+            <button class="btn-ghost" onclick="toggleForm('vitalForm')">Cancel</button>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <label>Filter:</label>
+          <select id="vitalFilter" onchange="loadVitals()">
+            <option value="">All types</option>
+            <option value="blood_pressure_systolic">BP Systolic</option>
+            <option value="blood_pressure_diastolic">BP Diastolic</option>
+            <option value="heart_rate">Heart Rate</option>
+            <option value="weight">Weight</option>
+            <option value="blood_glucose">Blood Glucose</option>
+            <option value="oxygen_saturation">O2 Saturation</option>
+            <option value="temperature">Temperature</option>
+          </select>
+        </div>
+        <div class="data-list" id="vitalsList"><p class="empty-state">No vitals logged yet.</p></div>
+      </section>
+
+      <!-- Medications -->
+      <section class="tab-panel" id="tab-medications">
+        <div class="page-header"><h1>Medications</h1><button class="btn-primary" id="addMedBtn">+ Add Medication</button></div>
+        <div class="form-panel" id="medForm" style="display:none">
+          <h3 id="medFormTitle">Add Medication</h3>
+          <input type="hidden" id="medEditId">
+          <div class="form-grid">
+            <div class="form-group"><label>Name *</label><input type="text" id="medName" placeholder="e.g. Lisinopril"></div>
+            <div class="form-group"><label>Dosage</label><input type="text" id="medDosage" placeholder="e.g. 10mg"></div>
+            <div class="form-group"><label>Frequency</label><input type="text" id="medFrequency" placeholder="e.g. Once daily"></div>
+            <div class="form-group"><label>Start Date</label><input type="date" id="medStart"></div>
+            <div class="form-group"><label>End Date</label><input type="date" id="medEnd"></div>
+            <div class="form-group"><label>Status</label><select id="medActive"><option value="1">Active</option><option value="0">Discontinued</option></select></div>
+          </div>
+          <div class="form-group"><label>Notes</label><textarea id="medNotes" rows="2" placeholder="Side effects, instructions..."></textarea></div>
+          <div class="form-actions">
+            <button class="btn-primary" onclick="saveMedication()">Save</button>
+            <button class="btn-ghost" onclick="cancelMedForm()">Cancel</button>
+          </div>
+        </div>
+        <div class="section-tabs">
+          <button class="section-tab active" onclick="filterMeds('active',this)">Active</button>
+          <button class="section-tab" onclick="filterMeds('all',this)">All</button>
+        </div>
+        <div class="data-list" id="medsList"><p class="empty-state">No medications added yet.</p></div>
+      </section>
+
+      <!-- Symptoms -->
+      <section class="tab-panel" id="tab-symptoms">
+        <div class="page-header"><h1>Symptom Journal</h1><button class="btn-primary" id="addSymptomBtn">+ Log Symptom</button></div>
+        <div class="form-panel" id="symptomForm" style="display:none">
+          <h3>Log Symptom</h3>
+          <div class="form-grid">
+            <div class="form-group span-2"><label>Symptom *</label><input type="text" id="symptomDesc" placeholder="e.g. Headache, chest pain, fatigue"></div>
+            <div class="form-group">
+              <label>Severity (1-10): <span id="severityValue">5</span></label>
+              <input type="range" min="1" max="10" id="symptomSeverity" oninput="document.getElementById('severityValue').textContent=this.value" value="5">
+            </div>
+            <div class="form-group"><label>Body Area</label><input type="text" id="symptomArea" placeholder="e.g. Head, chest"></div>
+            <div class="form-group"><label>Date &amp; Time</label><input type="datetime-local" id="symptomDate"></div>
+          </div>
+          <div class="form-group"><label>Notes</label><textarea id="symptomNotes" rows="2" placeholder="Triggers, duration, other details..."></textarea></div>
+          <div class="form-actions">
+            <button class="btn-primary" onclick="saveSymptom()">Save</button>
+            <button class="btn-ghost" onclick="toggleForm('symptomForm')">Cancel</button>
+          </div>
+        </div>
+        <div class="data-list" id="symptomsList"><p class="empty-state">No symptoms logged yet.</p></div>
+      </section>
+
+      <!-- Appointments -->
+      <section class="tab-panel" id="tab-appointments">
+        <div class="page-header"><h1>Appointments</h1><button class="btn-primary" id="addApptBtn">+ Add Appointment</button></div>
+        <div class="form-panel" id="apptForm" style="display:none">
+          <h3 id="apptFormTitle">Add Appointment</h3>
+          <input type="hidden" id="apptEditId">
+          <div class="form-grid">
+            <div class="form-group span-2"><label>Title *</label><input type="text" id="apptTitle" placeholder="e.g. Annual Physical"></div>
+            <div class="form-group"><label>Doctor / Provider</label><input type="text" id="apptDoctor" placeholder="e.g. Dr. Smith"></div>
+            <div class="form-group"><label>Location</label><input type="text" id="apptLocation" placeholder="e.g. City Medical Center"></div>
+            <div class="form-group"><label>Date</label><input type="date" id="apptDate"></div>
+            <div class="form-group"><label>Time</label><input type="time" id="apptTime"></div>
+          </div>
+          <div class="form-group"><label>Notes</label><textarea id="apptNotes" rows="2" placeholder="Questions to ask, preparation notes..."></textarea></div>
+          <div class="form-actions">
+            <button class="btn-primary" onclick="saveAppointment()">Save</button>
+            <button class="btn-ghost" onclick="cancelApptForm()">Cancel</button>
+          </div>
+        </div>
+        <div class="section-tabs">
+          <button class="section-tab active" onclick="filterAppts('upcoming',this)">Upcoming</button>
+          <button class="section-tab" onclick="filterAppts('all',this)">All</button>
+          <button class="section-tab" onclick="filterAppts('completed',this)">Completed</button>
+        </div>
+        <div class="data-list" id="apptsList"><p class="empty-state">No appointments scheduled.</p></div>
+      </section>
+
+      <!-- Notes -->
+      <section class="tab-panel" id="tab-notes">
+        <div class="page-header"><h1>Health Notes</h1><button class="btn-primary" id="addNoteBtn">+ New Note</button></div>
+        <div class="form-panel" id="noteForm" style="display:none">
+          <h3 id="noteFormTitle">New Note</h3>
+          <input type="hidden" id="noteEditId">
+          <div class="form-group"><label>Title</label><input type="text" id="noteTitle" placeholder="Note title"></div>
+          <div class="form-group"><label>Content *</label><textarea id="noteContent" rows="5" placeholder="Write your health notes here..."></textarea></div>
+          <div class="form-group"><label>Tags (comma-separated)</label><input type="text" id="noteTags" placeholder="e.g. diet, exercise, sleep"></div>
+          <div class="form-actions">
+            <button class="btn-primary" onclick="saveNote()">Save</button>
+            <button class="btn-ghost" onclick="cancelNoteForm()">Cancel</button>
+          </div>
+        </div>
+        <div class="notes-grid" id="notesList"><p class="empty-state">No notes yet.</p></div>
+      </section>
+
+      <!-- Profile -->
+      <section class="tab-panel" id="tab-profile">
+        <div class="page-header"><h1>My Health Profile</h1></div>
+        <div class="card profile-card">
+          <div class="form-grid">
+            <div class="form-group"><label>Full Name</label><input type="text" id="profName" placeholder="Your name"></div>
+            <div class="form-group"><label>Age</label><input type="number" id="profAge" placeholder="Age" min="0" max="150"></div>
+            <div class="form-group"><label>Gender</label>
+              <select id="profGender"><option value="">Prefer not to say</option><option value="Male">Male</option><option value="Female">Female</option><option value="Non-binary">Non-binary</option><option value="Other">Other</option></select>
+            </div>
+            <div class="form-group"><label>Blood Type</label>
+              <select id="profBloodType"><option value="">Unknown</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select>
+            </div>
+            <div class="form-group"><label>Height (cm)</label><input type="number" step="0.1" id="profHeight" placeholder="e.g. 175"></div>
+            <div class="form-group"><label>Weight (kg)</label><input type="number" step="0.1" id="profWeight" placeholder="e.g. 70"></div>
+          </div>
+          <div class="form-group"><label>Known Medical Conditions</label><textarea id="profConditions" rows="2" placeholder="e.g. Type 2 Diabetes, Hypertension"></textarea></div>
+          <div class="form-group"><label>Allergies</label><textarea id="profAllergies" rows="2" placeholder="e.g. Penicillin, Peanuts"></textarea></div>
+          <div class="form-group"><label>Emergency Contact</label><input type="text" id="profEmergency" placeholder="Name and phone number"></div>
+          <div class="form-actions"><button class="btn-primary" onclick="saveProfile()">Save Profile</button></div>
+          <p class="save-status" id="profileSaveStatus"></p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="bottom-nav">
+  <button class="bnav-item active" data-tab="dashboard"><span>&#x1F4CA;</span><span>Home</span></button>
+  <button class="bnav-item" data-tab="chat"><span>&#x1F4AC;</span><span>AI Chat</span></button>
+  <button class="bnav-item" data-tab="vitals"><span>&#x2764;&#xFE0F;</span><span>Vitals</span></button>
+  <button class="bnav-item" data-tab="medications"><span>&#x1F48A;</span><span>Meds</span></button>
+  <button class="bnav-item" id="moreBtn"><span>&#x22EF;</span><span>More</span></button>
+</nav>
+
+<div class="more-menu" id="moreMenu" style="display:none">
+  <div class="more-menu-inner">
+    <button class="more-item" data-tab="symptoms">&#x1F912; Symptoms</button>
+    <button class="more-item" data-tab="appointments">&#x1F4C5; Appointments</button>
+    <button class="more-item" data-tab="notes">&#x1F4DD; Notes</button>
+    <button class="more-item" data-tab="profile">&#x1F464; Profile</button>
+    <button class="more-item" onclick="downloadReport()">&#x1F4C4; Download Report</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/static/js/health_advisor.js"></script>
+</body>
+</html>
